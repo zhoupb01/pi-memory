@@ -16,11 +16,23 @@ Wrong memories are deleted. Outdated ones (a passed date, a finished project, a 
 
 ## Install
 
+For a stable version, install a pinned release:
+
+```bash
+pi install git:github.com/zhoupb01/pi-memory@v0.1.0
+```
+
+`pi update` leaves pinned releases in place. To upgrade, install another tag with `pi install git:github.com/zhoupb01/pi-memory@vX.Y.Z`; it replaces the old entry. Releases are listed in [CHANGELOG.md](CHANGELOG.md) and on the [GitHub releases page](https://github.com/zhoupb01/pi-memory/releases).
+
+To follow `main`, install without a tag:
+
 ```bash
 pi install git:github.com/zhoupb01/pi-memory
 ```
 
-This adds the memory extension and the `/tidy` command.
+Update this version with `pi update --extensions`.
+
+Both forms add the memory extension and the `/tidy` command. Do not install both a local path and a git source of this package at once.
 
 ## Where memory lives
 
@@ -46,13 +58,13 @@ The sample conversations are in Chinese. These are model-driven checks; review t
 - `test/seed-cold.sh` creates a test project and seeds duplicate preferences, dated memories, a missing script reference, and an archived payment provider. It deletes and recreates the target directory, so use a disposable path.
 - `test/sessions-cold.json` checks archiving passed dates at startup, `/tidy`, and recall from cold storage. The seed uses fixed November 2026 dates; which events have passed depends on the day you run it.
 
-From this package folder, run the basic conversations with an isolated memory root:
+From this package folder, run the basic conversations with an isolated memory root. The flags below disable installed extensions and prompt templates and load this working copy's extension and `/tidy` template, so an installed release does not affect the checks:
 
 ```bash
 trial=$(mktemp -d)
 mkdir -p "$trial/project/.git"
 PI_MEMORY_DIR="$trial/mem" bun test/rpc-drive.ts \
-  "$trial/project" '<provider/model>' test/sessions.json -ne -e "$PWD"
+  "$trial/project" '<provider/model>' test/sessions.json -ne -np -e "$PWD" --prompt-template "$PWD/tidy.md"
 ```
 
 For the cold storage checks, seed a fresh disposable directory and run `test/sessions-cold.json`:
@@ -61,7 +73,21 @@ For the cold storage checks, seed a fresh disposable directory and run `test/ses
 cold_trial=$(mktemp -d)
 bash test/seed-cold.sh "$cold_trial"
 PI_MEMORY_DIR="$cold_trial/mem" bun test/rpc-drive.ts \
-  "$cold_trial/proj" '<provider/model>' test/sessions-cold.json -ne -e "$PWD"
+  "$cold_trial/proj" '<provider/model>' test/sessions-cold.json -ne -np -e "$PWD" --prompt-template "$PWD/tidy.md"
+```
+
+## Releasing
+
+Edit the package and run the tests in `test/` as described above. Add a `## [X.Y.Z] - YYYY-MM-DD` entry to `CHANGELOG.md` and commit the changes on `main`. From a clean working tree, run:
+
+```bash
+scripts/release.sh X.Y.Z
+```
+
+The script sets the package version, commits it if changed, tags the release, pushes `main` and the tag, and creates a GitHub release from the changelog entry. Then install the new tag:
+
+```bash
+pi install git:github.com/zhoupb01/pi-memory@vX.Y.Z
 ```
 
 ## License
